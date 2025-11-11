@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Résumé de Rencontre (Long Format)</title>
+    <link rel="icon" type="image/png" href="faviconARR.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'gemini-blue': '#4285F4',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        
+        .loading-animation {
+            border-top-color: #4285F4;
+            -webkit-animation: spinner 0.6s linear infinite;
+            animation: spinner 0.6s linear infinite;
+        }
+
+        @keyframes spinner {
+            to { transform: rotate(360deg); }
+        }
+        
+        .container-bg {
+             background: linear-gradient(135deg, #e0f7fa 0%, #ffffff 100%);
+        }
+
+        /* Styles pour le rendu du résumé */
+        #summaryOutput {
+            line-height: 1.8;
+        }
+
+        #summaryOutput h1, #summaryOutput h2, #summaryOutput h3 {
+            font-weight: 700;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #1f2937;
+        }
+
+        #summaryOutput h1 { font-size: 1.5rem; }
+        #summaryOutput h2 { font-size: 1.25rem; }
+        #summaryOutput h3 { font-size: 1.1rem; }
+
+        #summaryOutput strong {
+            font-weight: 700;
+            color: #111827;
+        }
+
+        #summaryOutput em {
+            font-style: italic;
+            color: #374151;
+        }
+
+        #summaryOutput ul, #summaryOutput ol {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        #summaryOutput li {
+            margin-bottom: 0.5rem;
+        }
+
+        #summaryOutput p {
+            margin-bottom: 1rem;
+        }
+
+        #summaryOutput hr {
+            border-top: 2px solid #e5e7eb;
+            margin: 1.5rem 0;
+        }
+
+        #summaryOutput code {
+            background-color: #f3f4f6;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        #summaryOutput blockquote {
+            border-left: 4px solid #4285F4;
+            padding-left: 1rem;
+            margin-left: 0;
+            color: #4b5563;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body class="font-sans container-bg min-h-screen p-4 sm:p-8">
+
+    <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-xl p-6 sm:p-10 border border-gray-100">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-800 mb-2">
+                Agent Résumé de Rencontre (API)
+            </h1>
+            <p class="text-lg text-gray-600">
+                Collez votre conversation complète (transcription) ci-dessous.
+            </p>
+        </header>
+
+        <div class="mb-6">
+    <div class="creator-info flex justify-between items-center p-4 border rounded-lg bg-gray-50 mb-6">
+        
+        <div class="creator-text text-sm space-y-0.5">
+            <h2 class="text-lg font-bold text-gray-800">Simon Kelley</h2>
+            <p class="font-semibold text-gray-700">Conseiller en Innovation et Transformation Numérique</p>
+            <p class="text-indigo-600"><a href="mailto:innovation@regionthetford.com" class="hover:underline">📧 innovation@regionthetford.com</a></p>
+            
+            <div class="pt-3 border-t mt-3 border-gray-300">
+                <p class="text-xs font-bold text-gray-900">SOCIÉTÉ DE DÉVELOPPEMENT ÉCONOMIQUE DE LA RÉGION DE THETFORD (SDE)</p>
+                <p class="text-xs">Espace entrepreneuriat région Thetford (E2RT)</p>
+                <p class="text-xs">81, rue Notre-Dame Ouest, 2ᵉ étage</p>
+                <p class="text-xs">Thetford Mines (Québec) G6G 1J4</p>
+                <p class="text-xs">📞 Tél. 418 338-2188 poste 231#</p>
+            </div>
+        </div>
+        
+        <div class="creator-logos ml-6 flex-shrink-0">
+            <div class="logo-item w-64"> <img src="./images/logo-mrc.png" alt="MRC des Appalaches" class="max-w-full h-auto">
+            </div>
+        </div>
+    </div>
+    
+    <label for="conversationText" class="block text-base font-medium text-gray-900 mb-2">
+        Texte source (Veuillez retirer les informations confidentielles) :
+    </label>
+    <textarea id="conversationText" rows="15" 
+            placeholder="Collez ici la transcription complète de votre réunion, conversation ou entretien. L'API est optimisée pour gérer de très longs textes.
+
+Suggestion : Essayez aussi avec des petits bouts de la réunion seulement pour obtenir une précision accrue de ces sections. 
+
+Vous pouvez aussi modifier les instructions à votre guise afin de personnaliser le résultat. Par contre, ces modifications ne seront pas enregistrées."
+            class="w-full p-4 border border-gray-300 rounded-lg focus:ring-gemini-blue focus:border-gemini-blue transition duration-150 shadow-sm text-gray-700 resize-y"></textarea>
+</div>
+
+        <div class="mb-6">
+            <label for="systemPrompt" class="block text-base font-medium text-gray-900 mb-2">
+                Instructions Spécifiques à l'Agent :
+            </label>
+            <textarea id="systemPrompt" rows="8"
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-gemini-blue focus:border-gemini-blue transition duration-150 shadow-sm text-blue-400 resize-y">Tu es un assistant de direction bilingue (français et anglais), expert en synthèse de réunions. Ton objectif est de transformer des notes brutes, des discussions ou des transcriptions en un document structuré et immédiatement exploitable.
+
+1. CONTEXTE ET FORMAT EXIGÉ
+   - Langue de sortie : Rédige le résumé en Français
+   - Ton : Professionnel, factuel, concis et orienté vers l'action.
+   - Format de sortie : Utilise le format Markdown pour structurer ta réponse
+
+2. SORTIE REQUISE (Structure du Résumé)
+
+## 📋 RÉSUMÉ EXÉCUTIF
+
+**Date:** [Année, mois, jour], de [Heure] à [Heure], Durée: [X] min
+
+**Personnes présentes:**
+- [Nom], [Organisme/Entreprise]
+- [Nom], [Organisme/Entreprise]
+
+**Synthèse:**
+Résume la réunion en trois points maximum. Inclus l'objectif principal et la décision clé prise.
+
+---
+
+## 💬 POINTS CLÉS ET DISCUSSIONS
+
+Liste à puces des sujets abordés, classés par ordre chronologique. Pour chaque point, résume la discussion en une ou deux phrases maximum.
+
+---
+
+## ✅ PROCHAINES ÉTAPES
+
+Liste numérotée et complète de toutes les tâches à accomplir:
+
+1. **[TÂCHE]** - Responsable: [NOM] - Échéance: [DATE ou À DÉFINIR]
+2. **[TÂCHE]** - Responsable: [NOM] - Échéance: [DATE ou À DÉFINIR]
+
+3. INSTRUCTIONS D'ANALYSE STRICTES
+   - Priorisation : Concentre-toi sur les faits, les décisions et les actions
+   - Sécurité : Ne pas inclure d'informations personnelles sensibles
+   - Qualité : Utilise un langage clair et précis</textarea>
+        </div>
+
+        <button id="summarizeButton" onclick="startSummarization()"
+                class="w-full flex justify-center items-center py-3 px-4 border border-transparent text-lg font-medium rounded-lg text-white bg-gemini-blue hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gemini-blue transition duration-300 shadow-md transform hover:scale-[1.005]">
+            <span id="buttonText">Générer le Résumé</span>
+            <div id="loadingSpinner" class="hidden w-5 h-5 border-2 border-white border-solid rounded-full loading-animation ml-3"></div>
+        </button>
+        
+        <div id="resultContainer" class="mt-8">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h2 class="text-xl font-semibold text-gray-800">
+                    Résultat de l'Agent :
+                </h2>
+                <div id="copyButtonsGroup" class="hidden flex gap-2">
+                    <button id="copyHTMLButton" onclick="copyHTMLFormatted()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 flex items-center gap-2 shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span id="copyHTMLButtonText">Copier Formaté</span>
+                    </button>
+                    <button id="copyMarkdownButton" onclick="copyMarkdown()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition duration-200 flex items-center gap-2 shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        <span id="copyMarkdownButtonText">Copier Markdown</span>
+                    </button>
+                </div>
+            </div>
+            <div id="summaryOutput" class="min-h-[100px] p-6 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 shadow-inner">
+                Le résumé apparaîtra ici.
+            </div>
+            <div id="errorBox" class="hidden mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg" role="alert">
+                Une erreur est survenue. Veuillez réessayer.
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const apiKey = "AIzaSyDvVsagX402OgSRX75dEcnWi6ltz5bYS14";
+        const MODEL_NAME = 'gemini-flash-latest'; 
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
+
+        const summarizeButton = document.getElementById('summarizeButton');
+        const buttonText = document.getElementById('buttonText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const conversationTextarea = document.getElementById('conversationText');
+        const systemPromptInput = document.getElementById('systemPrompt');
+        const summaryOutput = document.getElementById('summaryOutput');
+        const errorBox = document.getElementById('errorBox');
+        const copyButtonsGroup = document.getElementById('copyButtonsGroup');
+        const copyHTMLButton = document.getElementById('copyHTMLButton');
+        const copyHTMLButtonText = document.getElementById('copyHTMLButtonText');
+        const copyMarkdownButton = document.getElementById('copyMarkdownButton');
+        const copyMarkdownButtonText = document.getElementById('copyMarkdownButtonText');
+        
+        let lastGeneratedSummary = '';
+        
+        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+        async function callGeminiAPI(userQuery, systemPrompt) {
+            const maxRetries = 3;
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const payload = {
+                        contents: [{ parts: [{ text: userQuery }] }],
+                        systemInstruction: {
+                            parts: [{ text: systemPrompt }]
+                        }
+                    };
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`API call failed: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+                    }
+
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    if (text) {
+                        return text;
+                    } else {
+                        throw new Error('No content generated by the model.');
+                    }
+
+                } catch (error) {
+                    console.error(`Attempt ${attempt + 1} failed:`, error.message);
+                    if (attempt === maxRetries - 1) {
+                        throw new Error('API request failed after multiple retries.');
+                    }
+                    await delay(Math.pow(2, attempt) * 1000); 
+                }
+            }
+        }
+
+        async function startSummarization() {
+            const conversationText = conversationTextarea.value.trim();
+            const systemPrompt = systemPromptInput.value.trim();
+            
+            errorBox.classList.add('hidden');
+            
+            if (!conversationText) {
+                summaryOutput.innerHTML = "Veuillez coller le texte de votre conversation pour commencer le résumé.";
+                return;
+            }
+
+            summarizeButton.disabled = true;
+            buttonText.textContent = 'Analyse en cours...';
+            loadingSpinner.classList.remove('hidden');
+            summaryOutput.innerHTML = `<p class="text-center text-gray-500">L'Agent est en train de lire et de synthétiser le document. Cela peut prendre quelques instants pour les très longs textes.</p>`;
+
+            const userQuery = `Voici la transcription intégrale d'une rencontre. Veuillez appliquer la consigne suivante et utiliser le format Markdown pour votre réponse :\n\n${systemPrompt}\n\nTranscription :\n\n---\n\n${conversationText}`;
+
+            try {
+                const summary = await callGeminiAPI(userQuery, systemPrompt);
+                
+                // Sauvegarder le résumé brut pour la copie
+                lastGeneratedSummary = summary;
+                
+                // Convertir le Markdown en HTML avec marked.js
+                summaryOutput.innerHTML = marked.parse(summary);
+                
+                // Afficher les boutons de copie
+                copyButtonsGroup.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Erreur fatale de l'Agent Résumé:", error);
+                errorBox.classList.remove('hidden');
+                errorBox.textContent = "Erreur: Impossible de générer le résumé. Veuillez vérifier la console pour plus de détails ou assurez-vous que la clé API est valide.";
+                summaryOutput.innerHTML = `Veuillez recommencer.`;
+            } finally {
+                summarizeButton.disabled = false;
+                buttonText.textContent = 'Générer le Résumé';
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+        // Copie le texte Markdown brut
+        async function copyMarkdown() {
+            try {
+                await navigator.clipboard.writeText(lastGeneratedSummary);
+                
+                const originalText = copyMarkdownButtonText.textContent;
+                copyMarkdownButtonText.textContent = '✓ Copié !';
+                copyMarkdownButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+                copyMarkdownButton.classList.add('bg-green-800');
+                
+                setTimeout(() => {
+                    copyMarkdownButtonText.textContent = originalText;
+                    copyMarkdownButton.classList.remove('bg-green-800');
+                    copyMarkdownButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Erreur lors de la copie Markdown:', error);
+                copyMarkdownButtonText.textContent = '❌ Erreur';
+                setTimeout(() => {
+                    copyMarkdownButtonText.textContent = 'Copier Markdown';
+                }, 2000);
+            }
+        }
+
+        // Copie le contenu HTML formaté (comme si vous sélectionniez manuellement)
+        async function copyHTMLFormatted() {
+            try {
+                // Créer un range de sélection pour le contenu HTML
+                const range = document.createRange();
+                range.selectNodeContents(summaryOutput);
+                
+                // Sélectionner le contenu
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+                // Copier avec la mise en forme HTML
+                document.execCommand('copy');
+                
+                // Désélectionner
+                selection.removeAllRanges();
+                
+                // Feedback visuel
+                const originalText = copyHTMLButtonText.textContent;
+                copyHTMLButtonText.textContent = '✓ Copié !';
+                copyHTMLButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                copyHTMLButton.classList.add('bg-blue-800');
+                
+                setTimeout(() => {
+                    copyHTMLButtonText.textContent = originalText;
+                    copyHTMLButton.classList.remove('bg-blue-800');
+                    copyHTMLButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Erreur lors de la copie HTML formatée:', error);
+                copyHTMLButtonText.textContent = '❌ Erreur';
+                setTimeout(() => {
+                    copyHTMLButtonText.textContent = 'Copier Formaté';
+                }, 2000);
+            }
+        }
+
+        async function copySummary() {
+            try {
+                // Copier le texte Markdown formaté dans le presse-papiers
+                await navigator.clipboard.writeText(lastGeneratedSummary);
+                
+                // Feedback visuel
+                const originalText = copyButtonText.textContent;
+                copyButtonText.textContent = '✓ Copié !';
+                copyButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+                copyButton.classList.add('bg-green-800');
+                
+                // Réinitialiser après 2 secondes
+                setTimeout(() => {
+                    copyButtonText.textContent = originalText;
+                    copyButton.classList.remove('bg-green-800');
+                    copyButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Erreur lors de la copie:', error);
+                copyButtonText.textContent = '❌ Erreur';
+                setTimeout(() => {
+                    copyButtonText.textContent = 'Copier le Résumé';
+                }, 2000);
+            }
+        }
+
+    </script>
+</body>
+</html>
